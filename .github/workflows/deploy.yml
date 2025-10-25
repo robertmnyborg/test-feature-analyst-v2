@@ -1,0 +1,295 @@
+name: Deploy Feature Analyst V2
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - production
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: feature-analyst-api
+  NODE_VERSION: '22'
+
+jobs:
+  # Job 1: Test Backend and Frontend
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type check backend
+        run: yarn workspace @feature-analyst/backend type-check
+
+      - name: Type check frontend
+        run: yarn workspace @feature-analyst/frontend type-check
+
+      - name: Lint backend
+        run: yarn workspace @feature-analyst/backend lint
+
+      - name: Lint frontend
+        run: yarn workspace @feature-analyst/frontend lint
+
+      - name: Test backend
+        run: yarn workspace @feature-analyst/backend test
+
+      - name: Test frontend
+        run: yarn workspace @feature-analyst/frontend test
+
+  # Job 2: Build and Push Backend Docker Image
+  build-backend:
+    name: Build Backend Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 3: Deploy Backend to ECS
+  deploy-backend:
+    name: Deploy Backend to ECS
+    runs-on: ubuntu-latest
+    needs: build-backend
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update ECS service
+        run: |
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          CLUSTER_NAME="peek-ecs-cluster"
+          SERVICE_NAME="feature-analyst-api-${ENVIRONMENT}"
+
+          # Force new deployment with latest image
+          aws ecs update-service \
+            --cluster ${CLUSTER_NAME} \
+            --service ${SERVICE_NAME} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+          # Wait for service to stabilize
+          aws ecs wait services-stable \
+            --cluster ${CLUSTER_NAME} \
+            --services ${SERVICE_NAME} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Verify deployment
+        run: |
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          CLUSTER_NAME="peek-ecs-cluster"
+          SERVICE_NAME="feature-analyst-api-${ENVIRONMENT}"
+
+          # Check running task count
+          RUNNING_COUNT=$(aws ecs describe-services \
+            --cluster ${CLUSTER_NAME} \
+            --services ${SERVICE_NAME} \
+            --query 'services[0].runningCount' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+
+          echo "Running tasks: ${RUNNING_COUNT}"
+
+          if [ "${RUNNING_COUNT}" -lt "1" ]; then
+            echo "Error: No running tasks found"
+            exit 1
+          fi
+
+  # Job 4: Build Frontend
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build frontend
+        run: yarn workspace @feature-analyst/frontend build
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+
+  # Job 5: Deploy Frontend to S3 and Invalidate CloudFront
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [build-frontend, deploy-backend]
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: |
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          BUCKET_NAME="feature-analyst-frontend-${ENVIRONMENT}"
+
+          aws s3 sync dist/ s3://${BUCKET_NAME}/ \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" \
+            --region ${{ env.AWS_REGION }}
+
+          # Upload HTML files with different cache settings
+          aws s3 sync dist/ s3://${BUCKET_NAME}/ \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "public,max-age=0,must-revalidate" \
+            --content-type "text/html" \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+
+          aws cloudfront create-invalidation \
+            --distribution-id ${DISTRIBUTION_ID} \
+            --paths "/*" \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deployment summary
+        run: |
+          ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          DOMAIN=${{ github.ref == 'refs/heads/main' && 'unit-features.peek.us' || 'unit-features-dev.peek.us' }}
+
+          echo "🚀 Deployment completed successfully!"
+          echo "Environment: ${ENVIRONMENT}"
+          echo "Frontend URL: https://${DOMAIN}"
+          echo "Backend API: https://${DOMAIN}/api"
+          echo "Commit: ${{ github.sha }}"
+
+  # Job 6: Run Database Migrations (Optional)
+  migrate-database:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get database URL from SSM
+        id: get-db-url
+        run: |
+          DB_URL=$(aws ssm get-parameter \
+            --name "/feature-analyst/production/database-url" \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "::add-mask::${DB_URL}"
+          echo "DATABASE_URL=${DB_URL}" >> $GITHUB_ENV
+
+      - name: Run migrations
+        run: |
+          cd backend
+          yarn build
+          node migrations/run-migrations.js
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}

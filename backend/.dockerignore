@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log*
+
+# Build output
+dist
+build
+*.tsbuildinfo
+
+# Tests
+__tests__
+*.test.ts
+*.spec.ts
+coverage
+.nyc_output
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Documentation
+*.md
+docs
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Misc
+.DS_Store
+Thumbs.db

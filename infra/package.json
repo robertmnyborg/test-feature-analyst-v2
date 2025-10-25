@@ -1,0 +1,26 @@
+{
+  "name": "@feature-analyst/infra",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AWS CDK infrastructure for Feature Analyst V2",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --all",
+    "deploy:backend": "cdk deploy FeatureAnalystBackendStack",
+    "deploy:frontend": "cdk deploy FeatureAnalystFrontendStack",
+    "diff": "cdk diff",
+    "destroy": "cdk destroy --all",
+    "clean": "rm -rf cdk.out dist"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.110.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "aws-cdk": "^2.110.0",
+    "typescript": "^5.2.0"
+  }
+}
