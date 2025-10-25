@@ -1,0 +1,58 @@
+/**
+ * Feature Analyst V2 - Global Styles
+ *
+ * Brand Colors:
+ * - Primary Background: #2B2D31 (dark charcoal)
+ * - Card Background: #FFFFFF (white)
+ * - Accent Color: #04D2C6 (teal)
+ * - Text Primary: #333
+ * - Text Secondary: #666
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Brand Colors */
+  --color-bg-primary: #2B2D31;
+  --color-bg-card: #FFFFFF;
+  --color-bg-light: #F8F8F8;
+  --color-accent: #04D2C6;
+  --color-accent-hover: #03B5AB;
+  --color-text-primary: #333;
+  --color-text-secondary: #666;
+  --color-text-tertiary: #888;
+  --color-border: #E0E0E0;
+
+  /* Spacing */
+  --spacing-xs: 5px;
+  --spacing-sm: 10px;
+  --spacing-md: 15px;
+  --spacing-lg: 20px;
+  --spacing-xl: 30px;
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Shadows */
+  --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.15);
+  --shadow-hover: 0 15px 45px rgba(0, 0, 0, 0.2);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+#root {
+  min-height: 100vh;
+}

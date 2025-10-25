@@ -1,0 +1,39 @@
+{
+  "name": "feature-analyst-v2",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Multifamily Unit Feature Comparison Tool - Monorepo",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace @feature-analyst/backend dev\" \"yarn workspace @feature-analyst/frontend dev\"",
+    "build": "yarn workspace @feature-analyst/shared build && yarn workspace @feature-analyst/backend build && yarn workspace @feature-analyst/frontend build",
+    "build:shared": "yarn workspace @feature-analyst/shared build",
+    "build:backend": "yarn workspace @feature-analyst/backend build",
+    "build:frontend": "yarn workspace @feature-analyst/frontend build",
+    "lint": "yarn workspace @feature-analyst/backend lint && yarn workspace @feature-analyst/frontend lint",
+    "type-check": "yarn workspace @feature-analyst/backend type-check && yarn workspace @feature-analyst/frontend type-check",
+    "test": "yarn workspace @feature-analyst/backend test && yarn workspace @feature-analyst/frontend test",
+    "clean": "rm -rf backend/dist backend/node_modules frontend/dist frontend/node_modules shared/dist shared/node_modules node_modules",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "yarn": ">=1.22.0"
+  }
+}
