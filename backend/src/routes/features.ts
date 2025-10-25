@@ -2,40 +2,31 @@
  * Feature Routes
  *
  * Endpoints:
- * - GET /api/features - Retrieve available features for filtering
+ * - GET /api/features - Get available features with usage counts
  */
 
 import { Router, Request, Response } from 'express';
-import type { GetFeaturesRequest, GetFeaturesResponse } from '@shared/types';
+import featureService from '../services/FeatureService';
+import { asyncHandler } from '../middleware/errorHandler';
+import type { GetFeaturesRequest, GetFeaturesResponse } from '@feature-analyst/shared';
 
 const router = Router();
 
 /**
  * GET /api/features
- * Retrieve available features for multi-select filter
- * Optional: scope to specific community
- * Returns features sorted by popularity (most common first)
+ * Retrieve available features/amenities with usage counts
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const { communityId } = req.query as GetFeaturesRequest;
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const { communityId } = req.query;
 
-    // TODO: Implement feature retrieval logic
-    // - Query unique features from database
-    // - Include usage counts (how many units have each feature)
-    // - Sort by popularity
-    // - Optionally filter by community
+  const features = await featureService.getFeatures(communityId as string | undefined);
 
-    const response: GetFeaturesResponse = {
-      features: [],
-      total: 0,
-    };
+  const response: GetFeaturesResponse = {
+    features,
+    total: features.length,
+  };
 
-    res.json(response);
-  } catch (error) {
-    console.error('Error fetching features:', error);
-    res.status(500).json({ error: 'Failed to fetch features' });
-  }
-});
+  res.json(response);
+}));
 
 export default router;

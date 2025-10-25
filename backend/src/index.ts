@@ -22,6 +22,9 @@ import featuresRouter from './routes/features';
 import msaRouter from './routes/msa';
 import exportRouter from './routes/export';
 
+// Import middleware
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+
 const app: Application = express();
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -41,18 +44,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Request compression
-app.use(compression());
+app.use(compression() as any);
 
 // Request parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
-if (NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
+const morganFormat = NODE_ENV === 'development' ? 'dev' : 'combined';
+app.use(morgan(morganFormat));
 
 // ============================================================================
 // Routes
@@ -76,21 +76,10 @@ app.use('/api/msa', msaRouter);
 app.use('/api/export', exportRouter);
 
 // 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
-  });
-});
+app.use(notFoundHandler);
 
 // Global error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
-  });
-});
+app.use(errorHandler);
 
 // ============================================================================
 // Server Startup

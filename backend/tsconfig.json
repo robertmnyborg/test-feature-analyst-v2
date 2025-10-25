@@ -10,7 +10,7 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../shared/src/*"]
+      "@feature-analyst/shared": ["../shared/src/types"]
     }
   },
   "include": ["src/**/*"],

@@ -2,52 +2,35 @@
  * Unit Routes
  *
  * Endpoints:
- * - POST /api/units/search - Search units with comprehensive filters
+ * - POST /api/units/search - Search units with filters
  */
 
 import { Router, Request, Response } from 'express';
-import type { SearchUnitsRequest, SearchUnitsResponse } from '@shared/types';
-import { validateSearchFilters } from '@shared/types';
+import unitService from '../services/UnitService';
+import { asyncHandler } from '../middleware/errorHandler';
+import { validateUnitSearchFilters } from '../middleware/validators';
+import type { SearchFilters, SearchUnitsResponse } from '@feature-analyst/shared';
 
 const router = Router();
 
 /**
  * POST /api/units/search
- * Retrieve units matching specified filter criteria
- * Implements AND logic for features, deduplication, pagination
+ * Search units with comprehensive filters
  */
-router.post('/search', async (req: Request, res: Response) => {
-  try {
-    const filters: SearchUnitsRequest = req.body;
+router.post('/search', validateUnitSearchFilters, asyncHandler(async (req: Request, res: Response) => {
+  const filters: SearchFilters = req.body;
 
-    // Validate filters
-    const validationErrors = validateSearchFilters(filters);
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validationErrors,
-      });
-    }
+  const { units, total } = await unitService.searchUnits(filters);
 
-    // TODO: Implement unit search logic
-    // - Query PostgreSQL with filters
-    // - Apply AND logic for features
-    // - Deduplicate units across data sources
-    // - Sort and paginate results
+  const response: SearchUnitsResponse = {
+    units,
+    total,
+    limit: filters.limit || 50,
+    offset: filters.offset || 0,
+    appliedFilters: filters,
+  };
 
-    const response: SearchUnitsResponse = {
-      units: [],
-      total: 0,
-      limit: filters.limit || 50,
-      offset: filters.offset || 0,
-      appliedFilters: filters,
-    };
-
-    res.json(response);
-  } catch (error) {
-    console.error('Error searching units:', error);
-    res.status(500).json({ error: 'Failed to search units' });
-  }
-});
+  res.json(response);
+}));
 
 export default router;

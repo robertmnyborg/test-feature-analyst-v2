@@ -7,7 +7,10 @@
  */
 
 import { Router, Request, Response } from 'express';
-import type { GetCommunitiesRequest, GetCommunitiesResponse, GetCommunityResponse } from '@shared/types';
+import communityService from '../services/CommunityService';
+import { asyncHandler, createError } from '../middleware/errorHandler';
+import { validatePagination, validateUUID } from '../middleware/validators';
+import type { GetCommunitiesRequest, GetCommunitiesResponse, GetCommunityResponse } from '@feature-analyst/shared';
 
 const router = Router();
 
@@ -15,41 +18,45 @@ const router = Router();
  * GET /api/communities
  * Retrieve list of communities with optional filtering by metro area
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    // TODO: Implement community retrieval logic
-    // Query params: msaId, limit, offset
+router.get('/', validatePagination, asyncHandler(async (req: Request, res: Response) => {
+  const { msaId, limit, offset } = req.query;
 
-    const response: GetCommunitiesResponse = {
-      communities: [],
-      total: 0,
-      limit: 50,
-      offset: 0,
-    };
+  const params: GetCommunitiesRequest = {
+    msaId: msaId as string | undefined,
+    limit: parseInt(limit as string, 10),
+    offset: parseInt(offset as string, 10),
+  };
 
-    res.json(response);
-  } catch (error) {
-    console.error('Error fetching communities:', error);
-    res.status(500).json({ error: 'Failed to fetch communities' });
-  }
-});
+  const { communities, total } = await communityService.getCommunities(params);
+
+  const response: GetCommunitiesResponse = {
+    communities,
+    total,
+    limit: params.limit || 50,
+    offset: params.offset || 0,
+  };
+
+  res.json(response);
+}));
 
 /**
  * GET /api/communities/:id
  * Retrieve detailed information for a specific community
  */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+router.get('/:id', validateUUID('id'), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
 
-    // TODO: Implement community details retrieval
-    // Return 404 if community not found
+  const community = await communityService.getCommunityById(id);
 
-    res.status(501).json({ error: 'Not implemented' });
-  } catch (error) {
-    console.error('Error fetching community details:', error);
-    res.status(500).json({ error: 'Failed to fetch community details' });
+  if (!community) {
+    throw createError('Community not found', 404);
   }
-});
+
+  const response: GetCommunityResponse = {
+    community,
+  };
+
+  res.json(response);
+}));
 
 export default router;

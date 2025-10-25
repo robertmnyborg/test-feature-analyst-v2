@@ -1,7 +1,7 @@
 /**
  * Feature Analyst V2 - Global Styles
  *
- * Brand Colors:
+ * Brand Colors (from CLAUDE.md):
  * - Primary Background: #2B2D31 (dark charcoal)
  * - Card Background: #FFFFFF (white)
  * - Accent Color: #04D2C6 (teal)
@@ -16,16 +16,30 @@
 }
 
 :root {
-  /* Brand Colors */
+  /* Brand Colors - Exact from CLAUDE.md */
   --color-bg-primary: #2B2D31;
   --color-bg-card: #FFFFFF;
   --color-bg-light: #F8F8F8;
+  --color-bg-sidebar: #F5F5F5;
   --color-accent: #04D2C6;
   --color-accent-hover: #03B5AB;
   --color-text-primary: #333;
   --color-text-secondary: #666;
   --color-text-tertiary: #888;
+  --color-text-white: #FFFFFF;
   --color-border: #E0E0E0;
+  --color-border-medium: #D0D0D0;
+
+  /* Teal Variations */
+  --color-teal-bg-light: rgba(4, 210, 198, 0.05);
+  --color-teal-bg-medium: rgba(4, 210, 198, 0.1);
+  --color-teal-bg-strong: rgba(4, 210, 198, 0.15);
+
+  /* Semantic Colors */
+  --color-warning: #F57C00;
+  --color-error: #D32F2F;
+  --color-warning-bg: #FFF3E0;
+  --color-error-bg: #FFEBEE;
 
   /* Spacing */
   --spacing-xs: 5px;
@@ -33,15 +47,26 @@
   --spacing-md: 15px;
   --spacing-lg: 20px;
   --spacing-xl: 30px;
+  --spacing-xxl: 40px;
 
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* Border Radius - Exact from CLAUDE.md */
+  --radius-input: 6px;
+  --radius-button: 12px;
+  --radius-card: 20px;
 
-  /* Shadows */
+  /* Shadows - Exact from CLAUDE.md */
   --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.15);
   --shadow-hover: 0 15px 45px rgba(0, 0, 0, 0.2);
+  --shadow-button: 0 10px 25px rgba(4, 210, 198, 0.3);
+  --shadow-focus: 0 0 0 3px rgba(4, 210, 198, 0.1);
+
+  /* Typography */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-xxl: 32px;
 }
 
 body {
@@ -51,8 +76,28 @@ body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   line-height: 1.6;
+  font-size: var(--font-size-base);
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
 }

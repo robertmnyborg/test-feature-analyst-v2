@@ -19,7 +19,7 @@ import type {
   GetMSADemographicsResponse,
   ExportRequest,
   ExportResponse,
-} from '@shared/types';
+} from '@feature-analyst/shared';
 
 class ApiClient {
   private client: AxiosInstance;

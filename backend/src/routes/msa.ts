@@ -1,61 +1,52 @@
 /**
- * MSA (Metro Statistical Area) Routes
+ * MSA Routes
  *
  * Endpoints:
- * - GET /api/msa - List available metro statistical areas
- * - GET /api/msa/:code - Get MSA demographics from US Census Bureau API
+ * - GET /api/msa - List metro statistical areas
+ * - GET /api/msa/:code - Get MSA demographics
  */
 
 import { Router, Request, Response } from 'express';
-import type { GetMSAsResponse, GetMSADemographicsResponse } from '@shared/types';
+import msaService from '../services/MSAService';
+import { asyncHandler, createError } from '../middleware/errorHandler';
+import type { GetMSAsResponse, GetMSADemographicsResponse } from '@feature-analyst/shared';
 
 const router = Router();
 
 /**
  * GET /api/msa
- * Retrieve available metro statistical areas
- * Returns MSA codes and names with community counts
+ * Retrieve list of metro statistical areas
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    // TODO: Implement MSA list retrieval
-    // - Query distinct MSAs from communities
-    // - Include community count per MSA
-    // - Sort alphabetically by MSA name
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const msas = await msaService.getAllMSAs();
 
-    const response: GetMSAsResponse = {
-      msas: [],
-      total: 0,
-    };
+  const response: GetMSAsResponse = {
+    msas,
+    total: msas.length,
+  };
 
-    res.json(response);
-  } catch (error) {
-    console.error('Error fetching MSAs:', error);
-    res.status(500).json({ error: 'Failed to fetch MSAs' });
-  }
-});
+  res.json(response);
+}));
 
 /**
  * GET /api/msa/:code
- * Retrieve demographic statistics for specified MSA
- * Integrates with US Census Bureau API
+ * Retrieve demographics for a specific MSA
  */
-router.get('/:code', async (req: Request, res: Response) => {
-  try {
-    const { code } = req.params;
+router.get('/:code', asyncHandler(async (req: Request, res: Response) => {
+  const { code } = req.params;
+  const forceRefresh = req.query.refresh === 'true';
 
-    // TODO: Implement MSA demographics retrieval
-    // - Check cache first
-    // - Call US Census Bureau API if needed
-    // - Cache result for performance
-    // - Return 404 if MSA not found
-    // - Handle API failures gracefully
+  const msa = await msaService.getMSAByCode(code, forceRefresh);
 
-    res.status(501).json({ error: 'Not implemented' });
-  } catch (error) {
-    console.error('Error fetching MSA demographics:', error);
-    res.status(500).json({ error: 'Failed to fetch MSA demographics' });
+  if (!msa) {
+    throw createError('MSA not found', 404);
   }
-});
+
+  const response: GetMSADemographicsResponse = {
+    msa,
+  };
+
+  res.json(response);
+}));
 
 export default router;
