@@ -126,7 +126,9 @@ export class UnitRepository {
       ${whereClause}
     `;
 
-    const countResult = await query<{ total: string }>(countQuery, queryParams.slice(0, paramIndex - 2));
+    // Use all parameters up to this point (before limit/offset are added)
+    const countParams = queryParams.slice(0);
+    const countResult = await query<{ total: string }>(countQuery, countParams);
     const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
     // Build sort clause
